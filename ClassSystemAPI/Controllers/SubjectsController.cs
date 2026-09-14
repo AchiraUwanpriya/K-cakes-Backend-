@@ -17,12 +17,38 @@ namespace ClassSystemAPI.Controllers
         }
 
         // GET: api/Subjects
-        public IEnumerable<Subject> GetSubjects()
+        public IHttpActionResult GetSubjects()
         {
             //return db.Subjects.ToList();
-            return db.Subjects
-             .ToList();
 
+            var subjects = db.Subjects.Select(s => new
+            {
+                s.SubjectID,
+                s.SubjectName,
+                s.SubjectCode,
+                s.Description,
+                s.TotalFee,
+                s.Duration_In_Months,
+                s.MonthlyFee,
+                s.IsActive,
+
+                Courses = s.CourseSubjects
+                    .Where(cs => cs.IsActive)
+                    .Select(cs => new
+                    {
+                        cs.Course.CourseID,
+                        cs.Course.CourseName,
+                        cs.Course.CourseCode,
+                        cs.Course.TeacherID,
+                        cs.Course.AcademicYear,
+                        cs.Course.Description,
+                        cs.Course.IsActive
+                    })
+                    .ToList()
+            })
+            .ToList();
+
+            return Ok(subjects);
         }
 
         [HttpGet]
