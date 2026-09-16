@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Web;
 using System.Web.Http;
 using ClassSystemAPI.Models;
+using ClassSystemAPI.Models.DTOs;
 
 namespace ClassSystemAPI.Controllers
 {
@@ -163,16 +165,90 @@ namespace ClassSystemAPI.Controllers
 
         // Achira
 
-        public IHttpActionResult PostSubject(Subject subject)
+        //public IHttpActionResult PostSubject(Subject subject)
+        //{
+        //    if (!ModelState.IsValid)
+        //        return BadRequest(ModelState);
+
+        //    subject.IsActive = true; // force default to true on creation
+
+        //    db.Subjects.Add(subject);
+        //    db.SaveChanges();
+        //    return CreatedAtRoute("DefaultApi", new { id = subject.SubjectID }, subject);
+        //}
+
+        public IHttpActionResult PostSubject(SubjectCreateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            subject.IsActive = true; // force default to true on creation
+            var courseIds = (dto.CourseIDs ?? new List<int>()).Distinct().ToList();
 
-            db.Subjects.Add(subject);
-            db.SaveChanges();
-            return CreatedAtRoute("DefaultApi", new { id = subject.SubjectID }, subject);
+            // Validate provided course IDs exist
+            if (courseIds.Any())
+            {
+                var existingCourseIds = db.Courses
+                    .Where(c => courseIds.Contains(c.CourseID))
+                    .Select(c => c.CourseID)
+                    .ToList();
+
+                var missing = courseIds.Except(existingCourseIds).ToList();
+                if (missing.Any())
+                    return BadRequest($"Invalid CourseIDs: {string.Join(",", missing)}");
+            }
+
+            using (var tx = db.Database.BeginTransaction())
+            {
+                var subject = new Subject
+                {
+                    SubjectName = dto.SubjectName,
+                    SubjectCode = dto.SubjectCode,
+                    Description = dto.Description,
+                    TotalFee = dto.TotalFee,
+                    Duration_In_Months = dto.Duration_In_Months,
+                    MonthlyFee = dto.MonthlyFee,
+                    IsActive = true // force default to true on creation
+                };
+
+                db.Subjects.Add(subject);
+                db.SaveChanges();
+
+                if (courseIds.Any())
+                {
+                    foreach (var cid in courseIds)
+                    {
+                        db.CourseSubjects.Add(new CourseSubjects { CourseID = cid, SubjectID = subject.SubjectID });
+                    }
+                    db.SaveChanges();
+                }
+
+                tx.Commit();
+
+                // Build response similar to GET
+                var created = db.Subjects
+                    .Where(s => s.SubjectID == subject.SubjectID)
+                    .Include(s => s.CourseSubjects.Select(cs => cs.Course))
+                    .Select(s => new
+                    {
+                        s.SubjectID,
+                        s.SubjectName,
+                        s.SubjectCode,
+                        s.Description,
+                        s.TotalFee,
+                        s.Duration_In_Months,
+                        s.MonthlyFee,
+                        s.IsActive,
+                        Courses = s.CourseSubjects.Select(cs => new
+                        {
+                            cs.Course.CourseID,
+                            cs.Course.CourseName,
+                            cs.Course.CourseCode
+                        }).ToList(),
+                    })
+                    .FirstOrDefault();
+
+                return CreatedAtRoute("DefaultApi", new { id = subject.SubjectID }, created);
+            }
         }
 
 

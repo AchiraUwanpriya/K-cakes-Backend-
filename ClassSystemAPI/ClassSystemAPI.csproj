@@ -218,6 +218,7 @@
     <Compile Include="Models\DTOs\PaymentCreateDto.cs" />
     <Compile Include="Models\DTOs\PaymentHistoryDto.cs" />
     <Compile Include="Models\DTOs\StudentDto.cs" />
+    <Compile Include="Models\DTOs\SubjectCreateDto.cs" />
     <Compile Include="Models\DTOs\UpdateUserDto.cs" />
     <Compile Include="Models\Enrollment.cs" />
     <Compile Include="Models\LoginRequest.cs" />
