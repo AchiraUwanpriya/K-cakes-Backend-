@@ -69,18 +69,57 @@ namespace ClassSystemAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            //var payment = db.Payment.Find(dto.PaymentID);
+            //if (payment == null)
+            //    return NotFound();
+
+            //// Add new installment to history
+            //var history = new PaymentHistory
+            //{
+            //    PaymentID = dto.PaymentID,
+            //    AmountPaid = dto.AmountPaid,
+            //    PaymentMethod = dto.PaymentMethod,
+            //    ReferenceNo = dto.ReferenceNo,
+            //    Remarks = dto.Remarks,
+
             var payment = db.Payment.Find(dto.PaymentID);
             if (payment == null)
                 return NotFound();
 
-            // Add new installment to history
+            if (dto.AmountPaid <= 0)
+                return BadRequest("Please enter a valid amount greater than 0.");
+
+            var balanceLeft = payment.TotalAmount - payment.PaidAmount;
+            if (dto.AmountPaid > balanceLeft)
+                return BadRequest("Amount exceeds the remaining balance.");
+
+            string monthsNote = null;
+            var enrollment = db.Enrollments.Find(payment.EnrollmentID);
+            var subject = enrollment == null ? null : db.Subjects.Find(enrollment.SubjectID);
+            var monthlyFee = subject != null && subject.MonthlyFee.HasValue ? subject.MonthlyFee.Value : 0m;
+
+            if (monthlyFee > 0)
+            {
+                var isFindPayment = dto.AmountPaid == balanceLeft;
+                if (!isFindPayment && dto.AmountPaid % monthlyFee != 0)
+                {
+                    return BadRequest("Partial payments are not accepted. The monthly Fee is"
+                        + monthlyFee.ToString("N2") + "LKR. Please pay"
+                        + (monthlyFee * 2).ToString("N2") + "for two months, and so on.");
+                }
+
+                var monthsPaid = (int)Math.Floor(dto.AmountPaid / monthlyFee);
+                if (monthsPaid > 0)
+                    monthsNote = "Paid for" + monthsPaid + "month" + (monthsPaid > 1 ? "s" : "");
+            }
+
             var history = new PaymentHistory
             {
                 PaymentID = dto.PaymentID,
                 AmountPaid = dto.AmountPaid,
                 PaymentMethod = dto.PaymentMethod,
                 ReferenceNo = dto.ReferenceNo,
-                Remarks = dto.Remarks,
+                Remarks = string.IsNullOrWhiteSpace(dto.Remarks) ? monthsNote : (monthsNote == null ? dto.Remarks : dto.Remarks + " | " + monthsNote),
                 PaymentDate = DateTime.Now,
                 CreatedBy = dto.CreatedBy,
                 CreatedDate = DateTime.Now
