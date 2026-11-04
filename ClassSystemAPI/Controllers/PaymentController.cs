@@ -15,6 +15,7 @@ namespace ClassSystemAPI.Controllers
         public String CourseName { get; set; }
         public String SubjectName { get; set; }
         public bool Blocked { get; set; }
+        public bool ShowReminder { get; set; }
         public int WeeksDue { get; set; }
         public int WeeksPaid { get; set; }
         public int DueDay { get; set; }
