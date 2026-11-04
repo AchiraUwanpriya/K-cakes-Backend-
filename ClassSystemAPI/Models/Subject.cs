@@ -22,6 +22,8 @@ namespace ClassSystemAPI.Models
         public int? Duration_In_Months { get; set; }
 
         public decimal? MonthlyFee { get; set; }
+
+        public int? PaymentDueDay { get; set; }
         public bool IsActive { get; set; }
 
 

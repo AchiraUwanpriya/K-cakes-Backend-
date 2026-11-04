@@ -58,6 +58,23 @@ namespace ClassSystemAPI.Controllers
             //   return BadRequest("Invalid or expired QR session");
             //}
 
+            //Weekly payment check(per class)
+            var scanSession = db.QRSessions.Find(attendance.SessionID);
+            if(scanSession != null)
+            {
+                var enrQuery = db.Enrollments.Where(e => e.StudentID == attendance.StudentID && e.CourseID == scanSession.CourseID && e.IsActive);
+
+                if(attendance.SubjectID.HasValue)
+                    enrQuery = enrQuery.Where(e => e.SubjectID == attendance.SubjectID.Value);
+
+                foreach (var enr in enrQuery.ToList())
+                {
+                    var access = PaymentAccess.Check(db, enr, DateTime.Now);
+                    if(access.Blocked)
+                        return Content(HttpStatusCode.Forbidden, new {message = access.Message});
+                }
+            }
+
             // Set default values
             attendance.ScanTime = DateTime.Now;
             attendance.Status = "Present"; 
@@ -87,6 +104,14 @@ namespace ClassSystemAPI.Controllers
             if (session == null)
             {
                 return BadRequest("Invalid or expired QR session");
+            }
+
+            //weekly payment check(per class)
+            foreach (var enr in db.Enrollments.Where(e => e.StudentID == request.StudentID && e.CourseID == session.CourseID && e.IsActive).ToList())
+            {
+                var access = PaymentAccess.Check(db, enr, DateTime.Now);
+                if(access.Blocked)
+                    return Content(HttpStatusCode.Forbidden, new {message = access.Message});
             }
 
             // Check if attendance already recorded

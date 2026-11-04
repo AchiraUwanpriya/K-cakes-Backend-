@@ -69,6 +69,9 @@ namespace ClassSystemAPI.Models
 
         public bool IsActive { get; set; } = true;
 
+        [NotMapped]
+        public int? SubjectID { get; set; }
+
         // Navigation properties
         //[ForeignKey("SessionID")]
         //public virtual QRSession QRSession { get; set; }

@@ -21,6 +21,8 @@ namespace ClassSystemAPI.Models.DTOs
 
         public decimal? MonthlyFee { get; set; }
 
+        public int? PaymentDueDay { get; set; }
+
         // Course(s) to link this subject to at creation time
         public List<int> CourseIDs { get; set; }
     }

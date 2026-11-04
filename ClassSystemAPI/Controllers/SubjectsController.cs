@@ -32,6 +32,7 @@ namespace ClassSystemAPI.Controllers
                 s.TotalFee,
                 s.Duration_In_Months,
                 s.MonthlyFee,
+                s.PaymentDueDay,
                 s.IsActive,
 
                 Courses = s.CourseSubjects
@@ -67,6 +68,7 @@ namespace ClassSystemAPI.Controllers
                     s.TotalFee,
                     s.Duration_In_Months,
                     s.MonthlyFee,
+                    s.PaymentDueDay,
                     s.IsActive
                 })
                 .ToList();
@@ -143,7 +145,8 @@ namespace ClassSystemAPI.Controllers
                     s.Description,
                     s.TotalFee,
                     s.Duration_In_Months,
-                    s.MonthlyFee
+                    s.MonthlyFee,
+                    s.PaymentDueDay
                 })
                 .ToList();
             return Ok(result);
@@ -207,6 +210,7 @@ namespace ClassSystemAPI.Controllers
                     TotalFee = dto.TotalFee,
                     Duration_In_Months = dto.Duration_In_Months,
                     MonthlyFee = dto.MonthlyFee,
+                    PaymentDueDay = dto.PaymentDueDay ?? 6,
                     IsActive = true // force default to true on creation
                 };
 
@@ -237,6 +241,7 @@ namespace ClassSystemAPI.Controllers
                         s.TotalFee,
                         s.Duration_In_Months,
                         s.MonthlyFee,
+                        s.PaymentDueDay,
                         s.IsActive,
                         Courses = s.CourseSubjects.Select(cs => new
                         {

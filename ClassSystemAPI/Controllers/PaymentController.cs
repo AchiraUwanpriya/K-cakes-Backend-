@@ -7,6 +7,76 @@ using System.Web.Http;
 
 namespace ClassSystemAPI.Controllers
 {
+    public class PaymentAccessInfo
+    {
+        public int EnrollmentID { get; set; }
+        public int CourseID { get; set; }
+        public int SubjectID { get; set; }
+        public String CourseName { get; set; }
+        public String SubjectName { get; set; }
+        public bool Blocked { get; set; }
+        public int WeeksDue { get; set; }
+        public int WeeksPaid { get; set; }
+        public int DueDay { get; set; }
+        public DateTime? NextDueDate { get; set; }
+        public String Message { get; set; }
+    }
+
+    public static class PaymentAccess
+    {
+        // The MonthlyFee column holds the WEEKLY fee.
+        public static PaymentAccessInfo Check(ClassSystemContext db, Enrollment enr, DateTime now)
+        {
+            var subject = db.Subjects.Find(enr.SubjectID);
+            var course = db.Courses.Find(enr.CourseID);
+            var payment = db.Payment.FirstOrDefault(p => p.EnrollmentID == enr.EnrollmentID);
+
+            var info = new PaymentAccessInfo
+            {
+                EnrollmentID = enr.EnrollmentID,
+                CourseID = enr.CourseID,
+                SubjectID = enr.SubjectID,
+                CourseName = course != null ? course.CourseName : null,
+                SubjectName = subject != null ? subject.SubjectName : null,
+                DueDay = 6
+            };
+
+            decimal weeklyFee = subject != null && subject.MonthlyFee.HasValue ? subject.MonthlyFee.Value : 0m;
+            if (subject == null || payment == null || weeklyFee <= 0) return info;   // nothing to enforce
+            if (enr.EnrollmentDate.Year < 2000) return info;
+
+            int dueDay = subject.PaymentDueDay.HasValue ? subject.PaymentDueDay.Value : 6;
+            if (dueDay < 0 || dueDay > 6) dueDay = 6;
+            info.DueDay = dueDay;
+
+            // Fully paid enrollments are never blocked
+            if (payment.TotalAmount > 0 && payment.PaidAmount >= payment.TotalAmount) return info;
+
+            var today = now.Date;
+            var joined = enr.EnrollmentDate.Date;
+
+            // First due date = next due weekday on or after the join date (days before it are free)
+            var firstDue = joined.AddDays(((dueDay - (int)joined.DayOfWeek) + 7) % 7);
+            int weeksDue = today < firstDue ? 0 : 1 + (int)((today - firstDue).TotalDays / 7);
+            int weeksPaid = (int)Math.Floor(payment.PaidAmount / weeklyFee);
+            var nextDue = firstDue.AddDays(7 * weeksDue);
+
+            info.WeeksDue = weeksDue;
+            info.WeeksPaid = weeksPaid;
+            info.NextDueDate = nextDue;
+            info.Blocked = weeksPaid < weeksDue;
+            info.ShowReminder = !info.Blocked && (nextDue - today).TotalDays <= 2 && weeksPaid < weeksDue + 1;
+
+            var name = string.IsNullOrEmpty(info.SubjectName) ? "this class" : info.SubjectName;
+            if (info.Blocked)
+                info.Message = "Your weekly payment for " + name + " is overdue. Please pay your teacher to continue.";
+            else if (info.ShowReminder)
+                info.Message = "Reminder: the weekly payment for " + name + " is due on " + nextDue.ToString("dddd, dd MMM") + ".";
+
+            return info;
+        }
+    }
+
     [RoutePrefix("api/Payments")]
     public class PaymentsController : ApiController
     {
@@ -69,19 +139,6 @@ namespace ClassSystemAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            //var payment = db.Payment.Find(dto.PaymentID);
-            //if (payment == null)
-            //    return NotFound();
-
-            //// Add new installment to history
-            //var history = new PaymentHistory
-            //{
-            //    PaymentID = dto.PaymentID,
-            //    AmountPaid = dto.AmountPaid,
-            //    PaymentMethod = dto.PaymentMethod,
-            //    ReferenceNo = dto.ReferenceNo,
-            //    Remarks = dto.Remarks,
-
             var payment = db.Payment.Find(dto.PaymentID);
             if (payment == null)
                 return NotFound();
@@ -93,24 +150,25 @@ namespace ClassSystemAPI.Controllers
             if (dto.AmountPaid > balanceLeft)
                 return BadRequest("Amount exceeds the remaining balance.");
 
-            string monthsNote = null;
+            string weeksNote = null;
             var enrollment = db.Enrollments.Find(payment.EnrollmentID);
             var subject = enrollment == null ? null : db.Subjects.Find(enrollment.SubjectID);
-            var monthlyFee = subject != null && subject.MonthlyFee.HasValue ? subject.MonthlyFee.Value : 0m;
+            var weeklyFee = subject != null && subject.MonthlyFee.HasValue ? subject.MonthlyFee.Value : 0m;
 
-            if (monthlyFee > 0)
+            if(weeklyFee > 0)
             {
-                var isFindPayment = dto.AmountPaid == balanceLeft;
-                if (!isFindPayment && dto.AmountPaid % monthlyFee != 0)
+                var isFinalPayment = dto.AmountPaid == balanceLeft;
+                if (!isFinalPayment && dto.AmountPaid % weeklyFee != 0)
                 {
-                    return BadRequest("Partial payments are not accepted. The monthly Fee is"
-                        + monthlyFee.ToString("N2") + "LKR. Please pay"
-                        + (monthlyFee * 2).ToString("N2") + "for two months, and so on.");
+                    return BadRequest("Partial payments are not accepted. The weekly fee is"
+                        + weeklyFee.ToString("N2") + "LKR. Please Pay."
+                        + weeklyFee.ToString("N2") + "for one week,"
+                        + (weeklyFee * 2).ToString("N2") + "for two weeks, and so on.");
                 }
 
-                var monthsPaid = (int)Math.Floor(dto.AmountPaid / monthlyFee);
-                if (monthsPaid > 0)
-                    monthsNote = "Paid for" + monthsPaid + "month" + (monthsPaid > 1 ? "s" : "");
+                var weeksPaid = (int)Math.Floor(dto.AmountPaid / weeklyFee);
+                if(weeksPaid > 0)
+                    weeksNote = "Paid for" + weeksPaid + "week" + (weeksPaid > 1 ? "s" : "");
             }
 
             var history = new PaymentHistory
@@ -119,7 +177,7 @@ namespace ClassSystemAPI.Controllers
                 AmountPaid = dto.AmountPaid,
                 PaymentMethod = dto.PaymentMethod,
                 ReferenceNo = dto.ReferenceNo,
-                Remarks = string.IsNullOrWhiteSpace(dto.Remarks) ? monthsNote : (monthsNote == null ? dto.Remarks : dto.Remarks + " | " + monthsNote),
+                Remarks = string.IsNullOrWhiteSpace(dto.Remarks) ? weeksNote : (weeksNote == null ? dto.Remarks : dto.Remarks + " | " + weeksNote),
                 PaymentDate = DateTime.Now,
                 CreatedBy = dto.CreatedBy,
                 CreatedDate = DateTime.Now
@@ -558,6 +616,18 @@ namespace ClassSystemAPI.Controllers
         //        .ToList();
         //    return Ok(payments);
         //}
+
+        [HttpGet]
+        [Route("student/{studentId}/access")]
+        public IHttpActionResult GetAccessByStudent(int studentId)
+        {
+            var now = DateTime.Now;
+            var enrollments = db.Enrollments
+                .Where(e => e.StudentID == studentId && e.IsActive)
+                .ToList();
+            var result = enrollments.Select(e => PaymentAccess.Check(db, e, now)).ToList();
+            return Ok(result);
+        }
 
         [HttpGet]
         [Route("student/{studentId}")]
