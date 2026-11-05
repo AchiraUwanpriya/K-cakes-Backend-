@@ -43,7 +43,7 @@ namespace ClassSystemAPI.Controllers
             return Ok(attendance);
         }
 
-        //post attendance
+        //POST Attendance
         public IHttpActionResult PostAttendance(Attendance attendance)
         {
             if (!ModelState.IsValid)
@@ -52,27 +52,46 @@ namespace ClassSystemAPI.Controllers
             }
 
             int? courseId = attendance.CourseID;
-            if (courseId == null)
+            if(courseId == null)
             {
                 var qr = db.QRSessions.FirstOrDefault(q => q.SessionID == attendance.SessionID);
                 if (qr != null) courseId = qr.CourseID;
             }
-
             if(courseId != null)
             {
-                var enrollments = db.Enrollments.Where(e=>e.StudentID == attendance.StudentID && e.CourseID == courseId.Value && e.IsActive).ToList();
+                var enrollments = db.Enrollments.Where(e => e.StudentID == attendance.StudentID && e.CourseID == courseId.Value && e.IsActive).ToList();
+                
                 if(attendance.SubjectID != null)
                 {
-                    enrollments = enrollments.Where(e => e.SubjectID == attendance.SubjectID.Value).ToList();
+                    enrollments = enrollments.Where(e=> e.SubjectID == attendance.SubjectID.Value).ToList();
                 }
                 foreach(var enr in enrollments)
                 {
                     var access = PaymentAccess.Check(db, enr, DateTime.Now);
                     if (access.Blocked)
                     {
-                        return Content(HttpStatusCode.Forbidden, new {message = access.Message});
+                        return Content(HttpStatusCode.Forbidden, new { message = access.Message });
                     }
                 }
+            }
+
+            var schedule = db.ClassSchedules.Find(attendance.SessionID);
+            if(schedule != null)
+            {
+                var classDay = (schedule.ClassDate ?? DateTime.Now).Date;
+                var cutoff = classDay + schedule.EndTime + TimeSpan.FromHours(1);
+                if(DateTime.Now > cutoff)
+                {
+                    return Content(HttpStatusCode.BadRequest, new { message = "Attendance is closed for this class. It was open until " + cutoff.ToString("hh:mm tt") + "." });
+                }
+            }
+
+            var today = DateTime.Now.Date;
+            bool alreadyMarked = db.Attendances.Any(a => a.SessionID == attendance.SessionID && a.StudentID == attendance.StudentID && DbFunctions.TruncateTime(a.ScanTime) == today);
+
+            if (alreadyMarked)
+            {
+                return Content(HttpStatusCode.Conflict, new { message = "Attendance has already been recorded for this student for today's class" });
             }
 
             attendance.ScanTime = DateTime.Now;

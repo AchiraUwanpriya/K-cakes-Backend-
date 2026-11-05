@@ -26,8 +26,9 @@ namespace ClassSystemAPI.Controllers
     public static class PaymentAccess
     {
         // The MonthlyFee column holds the WEEKLY fee.
-        public static PaymentAccessInfo Check(ClassSystemContext db, Enrollment enr, DateTime now)
+        public static PaymentAccessInfo Check(ClassSystemContext db, Enrollment enr, DateTime now = default(DateTime))
         {
+            if (now == default(DateTime)) now = DateTime.Now;
             var subject = db.Subjects.Find(enr.SubjectID);
             var course = db.Courses.Find(enr.CourseID);
             var payment = db.Payment.FirstOrDefault(p => p.EnrollmentID == enr.EnrollmentID);
