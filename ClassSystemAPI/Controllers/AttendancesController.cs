@@ -43,7 +43,7 @@ namespace ClassSystemAPI.Controllers
             return Ok(attendance);
         }
 
-        // POST: api/Attendances
+        //post attendance
         public IHttpActionResult PostAttendance(Attendance attendance)
         {
             if (!ModelState.IsValid)
@@ -51,33 +51,32 @@ namespace ClassSystemAPI.Controllers
                 return BadRequest(ModelState);
             }
 
-            //// Verify the QR session is valid and active
-            //var session = db.QRSessions.Find(attendance.SessionID);
-            //if (session == null || !session.IsActive || DateTime.Now > session.ExpiryTime)
-            //{
-            //   return BadRequest("Invalid or expired QR session");
-            //}
-
-            //Weekly payment check(per class)
-            var scanSession = db.QRSessions.Find(attendance.SessionID);
-            if(scanSession != null)
+            int? courseId = attendance.CourseID;
+            if (courseId == null)
             {
-                var enrQuery = db.Enrollments.Where(e => e.StudentID == attendance.StudentID && e.CourseID == scanSession.CourseID && e.IsActive);
+                var qr = db.QRSessions.FirstOrDefault(q => q.SessionID == attendance.SessionID);
+                if (qr != null) courseId = qr.CourseID;
+            }
 
-                if(attendance.SubjectID.HasValue)
-                    enrQuery = enrQuery.Where(e => e.SubjectID == attendance.SubjectID.Value);
-
-                foreach (var enr in enrQuery.ToList())
+            if(courseId != null)
+            {
+                var enrollments = db.Enrollments.Where(e=>e.StudentID == attendance.StudentID && e.CourseID == courseId.Value && e.IsActive).ToList();
+                if(attendance.SubjectID != null)
+                {
+                    enrollments = enrollments.Where(e => e.SubjectID == attendance.SubjectID.Value).ToList();
+                }
+                foreach(var enr in enrollments)
                 {
                     var access = PaymentAccess.Check(db, enr, DateTime.Now);
-                    if(access.Blocked)
+                    if (access.Blocked)
+                    {
                         return Content(HttpStatusCode.Forbidden, new {message = access.Message});
+                    }
                 }
             }
 
-            // Set default values
             attendance.ScanTime = DateTime.Now;
-            attendance.Status = "Present"; 
+            attendance.Status = "Present";
 
             db.Attendances.Add(attendance);
             db.SaveChanges();

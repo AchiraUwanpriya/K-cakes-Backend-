@@ -72,6 +72,9 @@ namespace ClassSystemAPI.Models
         [NotMapped]
         public int? SubjectID { get; set; }
 
+        [NotMapped]
+        public int? CourseID { get; set; }
+
         // Navigation properties
         //[ForeignKey("SessionID")]
         //public virtual QRSession QRSession { get; set; }
