@@ -16,6 +16,12 @@ namespace ClassSystemAPI.Controllers
         }
 
         // GET api/values/5
+        //public string Get(int id)
+        //{
+        //    return "value";
+        //}
+
+        // GET api/values/5
         public string Get(int id)
         {
             return "value";
