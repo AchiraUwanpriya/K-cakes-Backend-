@@ -161,10 +161,10 @@ namespace ClassSystemAPI.Controllers
                 var isFinalPayment = dto.AmountPaid == balanceLeft;
                 if (!isFinalPayment && dto.AmountPaid % weeklyFee != 0)
                 {
-                    return BadRequest("Partial payments are not accepted. The weekly fee is"
-                        + weeklyFee.ToString("N2") + "LKR. Please Pay."
-                        + weeklyFee.ToString("N2") + "for one week,"
-                        + (weeklyFee * 2).ToString("N2") + "for two weeks, and so on.");
+                    return BadRequest("Partial payments are not accepted. The weekly fee is "
+                        + weeklyFee.ToString("N2") + "LKR. Please Pay "
+                        + weeklyFee.ToString("N2") + " for one week, "
+                        + (weeklyFee * 2).ToString("N2") + " for two weeks, and so on.");
                 }
 
                 var weeksPaid = (int)Math.Floor(dto.AmountPaid / weeklyFee);
