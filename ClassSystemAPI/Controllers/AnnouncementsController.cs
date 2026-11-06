@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net;
 using System.Web.Http;
 using System.Data.Entity;
@@ -35,21 +36,20 @@ namespace ClassSystemAPI.Controllers
         // Returns announcements for all courses where the student is currently enrolled.
         [HttpGet]
         [Route("api/Announcements/Student/{studentId}")]
-        public IHttpActionResult GetAnnouncementsForStudent(int studentId)
+        public IHttpActionResult GetAnnouncementForStudents(int studentId)
         {
-            var studentExists = db.Students.Any(s => s.StudentID == studentId);
-            if (!studentExists) return NotFound();
+            var studentExists = db.Students.Any(s=> s.StudentID == studentId);
+            if(!studentExists) return NotFound();
 
-            var courseIds = db.Enrollments
-                .Where(e => e.StudentID == studentId && e.IsActive)
-                .Select(e => e.CourseID);
+            var now = DateTime.Now;
 
-            var announcements = db.Announcements
-                .Where(a => courseIds.Contains(a.CourseID))
-                .Include(a => a.Course)
-                .Include(a => a.Teacher.User)
-                .OrderByDescending(a => a.PostDate)
-                .Select(a => new
+            var enrollments = db.Enrollments.Where(e => e.StudentID == studentId && e.IsActive).Select(e => new {e.CourseID, e.SubjectID}).ToList();
+
+            var courseIds = enrollments.Select(e => e.CourseID).Distinct().ToList();
+            var subjectIds = enrollments.Select(e => e.SubjectID).Distinct().ToList();
+
+            var announcements = db.Announcements.Where(a => a.IsForAllStudents || (a.CourseID != null && courseIds.Contains(a.CourseID.Value) && (a.SubjectID == null || subjectIds.Contains(a.SubjectID.Value))))
+                .Where(a => a.ExpiryDate == null || a.ExpiryDate > now).OrderByDescending(a => a.PostDate).Select(a => new
                 {
                     a.AnnouncementID,
                     a.Title,
@@ -57,7 +57,10 @@ namespace ClassSystemAPI.Controllers
                     a.PostDate,
                     a.ExpiryDate,
                     a.IsImportant,
-                    Course = new
+                    a.IsForAllStudents,
+                    a.SubjectID,
+                    SubjectName = db.Subjects.Where(s => s.SubjectID == a.SubjectID).Select(s => s.SubjectName).FirstOrDefault(),
+                    Course = a.Course == null ? null : new
                     {
                         a.Course.CourseID,
                         a.Course.CourseName,
@@ -68,7 +71,7 @@ namespace ClassSystemAPI.Controllers
                         a.Teacher.TeacherID,
                         FirstName = a.Teacher.User.FirstName,
                         LastName = a.Teacher.User.LastName,
-                        Username = a.Teacher.User.Username
+                        UserName = a.Teacher.User.Username
                     }
                 })
                 .ToList();
@@ -76,11 +79,15 @@ namespace ClassSystemAPI.Controllers
             return Ok(announcements);
         }
 
-        // POST: api/Announcements
-        public IHttpActionResult PostAnnouncement(Announcement announcement)
+       //POST Announcement
+       public IHttpActionResult PostAnnouncement(Announcement announcement)
         {
-            if (!ModelState.IsValid)
+            if(!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            var targetError = NormalizeTarget(announcement);
+            if(targetError != null)
+                return BadRequest(targetError);
 
             db.Announcements.Add(announcement);
             db.SaveChanges();
@@ -88,19 +95,37 @@ namespace ClassSystemAPI.Controllers
             return CreatedAtRoute("DefaultApi", new { id = announcement.AnnouncementID }, announcement);
         }
 
-        // PUT: api/Announcements/5
-        public IHttpActionResult PutAnnouncement(int id, Announcement announcement)
+        //PUT Announcment
+        public IHttpActionResult PutAnnoucement(int id, Announcement announcement)
         {
-            if (!ModelState.IsValid)
+            if(!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             if (id != announcement.AnnouncementID)
                 return BadRequest();
 
+            var targetError = NormalizeTarget(announcement);
+            if(targetError != null)
+                return BadRequest(targetError);
+
             db.Entry(announcement).State = EntityState.Modified;
             db.SaveChanges();
 
             return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        //A notice goes to all or a course
+        private string NormalizeTarget(Announcement a)
+        {
+            if (a.IsForAllStudents)
+            {
+                a.CourseID = null;
+                a.SubjectID = null;
+                return null;
+            }
+            if (a.CourseID == null)
+                return "Select a course, or send the notice to all students";
+            return null;
         }
 
         // DELETE: api/Announcements/5

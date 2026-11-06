@@ -9,9 +9,10 @@ namespace ClassSystemAPI.Models
         [Key]
         public int AnnouncementID { get; set; }
 
-        public int CourseID { get; set; }
-
-        public int TeacherID { get; set; }
+        public int? CourseID { get; set; }
+        public int? TeacherID { get; set; }
+        public int? SubjectID { get; set; }
+        public bool IsForAllStudents { get; set; } = false;
 
         [Required]
         [MaxLength(255)]
