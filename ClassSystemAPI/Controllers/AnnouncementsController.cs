@@ -36,7 +36,7 @@ namespace ClassSystemAPI.Controllers
         // Returns announcements for all courses where the student is currently enrolled.
         [HttpGet]
         [Route("api/Announcements/Student/{studentId}")]
-        public IHttpActionResult GetAnnouncementForStudents(int studentId)
+        public IHttpActionResult GetAnnouncementForStudents(int studentId, bool includeExpired = false)
         {
             var studentExists = db.Students.Any(s=> s.StudentID == studentId);
             if(!studentExists) return NotFound();
@@ -49,7 +49,7 @@ namespace ClassSystemAPI.Controllers
             var subjectIds = enrollments.Select(e => e.SubjectID).Distinct().ToList();
 
             var announcements = db.Announcements.Where(a => a.IsForAllStudents || (a.CourseID != null && courseIds.Contains(a.CourseID.Value) && (a.SubjectID == null || subjectIds.Contains(a.SubjectID.Value))))
-                .Where(a => a.ExpiryDate == null || a.ExpiryDate > now).OrderByDescending(a => a.PostDate).Select(a => new
+                .Where(a => includeExpired || a.ExpiryDate == null || a.ExpiryDate > now).OrderByDescending(a => a.PostDate).Select(a => new
                 {
                     a.AnnouncementID,
                     a.Title,

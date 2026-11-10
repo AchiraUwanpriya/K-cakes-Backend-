@@ -77,6 +77,7 @@ namespace ClassSystemAPI.Models
         public DbSet<Attendance> Attendances { get; set; }
         public DbSet<Payment> Payment { get; set; }
         public DbSet<PaymentHistory> PaymentHistory { get; set; }
+        public DbSet<WebsiteCourse> WebsiteCourses { get; set; }
 
         //public IEnumerable<object> QRSessionAttendances { get; internal set; }
 
