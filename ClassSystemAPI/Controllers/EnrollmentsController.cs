@@ -3,6 +3,7 @@ using System.Net;
 using System.Web.Http;
 using System.Data.Entity;
 using ClassSystemAPI.Models;
+using System;
 
 namespace ClassSystemAPI.Controllers
 {
@@ -127,6 +128,21 @@ namespace ClassSystemAPI.Controllers
 
             db.Enrollments.Add(enrollment);
             db.SaveChanges();
+
+            var subj = db.Subjects.Find(enrollment.SubjectID);
+            if(subj != null && subj.MonthlyFee.HasValue && subj.MonthlyFee.Value > 0 && !db.Payment.Any(p => p.EnrollmentID == enrollment.EnrollmentID))
+            {
+                int months = subj.Duration_In_Months ?? 1;
+                db.Payment.Add(new Payment
+                {
+                    EnrollmentID = enrollment.EnrollmentID,
+                    TotalAmount = subj.MonthlyFee.Value + months * 4,
+                    PaidAmount = 0,
+                    Status = "PENDING",
+                    CreatedDate = DateTime.Now
+                });
+                db.SaveChanges();
+            }
 
             return CreatedAtRoute("DefaultApi", new { id = enrollment.EnrollmentID }, enrollment);
         }

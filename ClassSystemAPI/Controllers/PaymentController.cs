@@ -108,8 +108,21 @@ namespace ClassSystemAPI.Controllers
                 CreatedDate = DateTime.Now
             };
 
-            db.Payment.Add(payment);
-            db.SaveChanges(); // PaymentID generated
+            var pending = db.Payment.FirstOrDefault(p => p.EnrollmentID == dto.EnrollmentID && p.PaidAmount == 0);
+            if(pending != null)
+            {
+                pending.TotalAmount = payment.TotalAmount;
+                pending.PaidAmount = payment.PaidAmount;
+                pending.Status = payment.Status;
+                pending.UpdatedDate = DateTime.Now;
+                pending.UpdatedBy = dto.CreatedBy;
+                payment = pending;
+            }
+            else
+            {
+                db.Payment.Add(payment);
+            }
+            db.SaveChanges();
 
             // Save first payment into history if any
             if (dto.FirstPaidAmount > 0)

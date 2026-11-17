@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.RightsManagement;
 using System.Web.Http;
 
 namespace ClassSystemAPI.Controllers
@@ -40,12 +39,12 @@ namespace ClassSystemAPI.Controllers
             if(!ModelState.IsValid)
                 return BadRequest(ModelState);
             course.WebsiteCourseID = 0;
-            course.CreatedDate = DateTime.Now;  
+            course.CreatedDate = DateTime.Now;
 
             db.WebsiteCourses.Add(course);
             db.SaveChanges();
 
-            return Ok();
+            return Ok(course);
         }
 
         public IHttpActionResult PutWebsiteCourse(int id, WebsiteCourse course)

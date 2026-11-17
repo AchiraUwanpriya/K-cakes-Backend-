@@ -901,6 +901,23 @@ namespace ClassSystemAPI.Controllers
             return Ok(new { message = "User moved to inactive" });
         }
 
+        [HttpDelete]
+        [Route("api/Users/Rollback/{id}")]
+        public IHttpActionResult RollbackUser(int id)
+        {
+            var user = db.Users.Find(id);
+            if (user == null)
+                return NotFound();
+
+            if (db.Teachers.Any(t => t.TeacherID == id) || db.Students.Any(s => s.StudentID == id))
+                return BadRequest("User has a teacher/student record, not removed");
+
+            db.Users.Remove(user);
+            db.SaveChanges();
+
+            return Ok(new { message = "User removed" });
+        }
+
         [HttpPut]
         [Route("api/Users/Activate/{id}")]
         public IHttpActionResult ActivateUser(int id)
