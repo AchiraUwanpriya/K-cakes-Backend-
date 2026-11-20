@@ -198,6 +198,7 @@
     <Compile Include="Controllers\PaymentController.cs" />
     <Compile Include="Controllers\QRSessionsController.cs" />
     <Compile Include="Controllers\ReportsController.cs" />
+    <Compile Include="Controllers\ResourceStoreController.cs" />
     <Compile Include="Controllers\StudentsController.cs" />
     <Compile Include="Controllers\StudyMaterialsController.cs" />
     <Compile Include="Controllers\SubjectsController.cs" />
@@ -206,8 +207,18 @@
     <Compile Include="Controllers\UsersController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
     <Compile Include="Controllers\WebsiteCoursesController.cs" />
+    <Compile Include="Controllers\VideoStoreController.cs" />
+    <Compile Include="Models\Visitor.cs" />
+    <Compile Include="Models\CartResource.cs" />
+    <Compile Include="Models\ResourceRequest.cs" />
+    <Compile Include="Models\ResRequestItem.cs" />
+    <Compile Include="Models\DTOs\VisitorRegisterDto.cs" />
+    <Compile Include="Models\DTOs\VisitorLoginDto.cs" />
+    <Compile Include="Models\DTOs\VideoRequestCreateDto.cs" />
+    <Compile Include="Models\DTOs\VideoDecisionDto.cs" />
     <Compile Include="Models\Announcement.cs" />
     <Compile Include="Models\Attendance.cs" />
+    <Compile Include="Models\CartResource.cs" />
     <Compile Include="Models\CourseSubjects.cs" />
     <Compile Include="Models\ClassSchedule.cs" />
     <Compile Include="Models\ClassSystemContext.cs" />
@@ -221,12 +232,18 @@
     <Compile Include="Models\DTOs\StudentDto.cs" />
     <Compile Include="Models\DTOs\SubjectCreateDto.cs" />
     <Compile Include="Models\DTOs\UpdateUserDto.cs" />
+    <Compile Include="Models\DTOs\VideoDecisionDto.cs" />
+    <Compile Include="Models\DTOs\VideoRequestCreateDto.cs" />
+    <Compile Include="Models\DTOs\VisitorLoginDto.cs" />
+    <Compile Include="Models\DTOs\VisitorRegisterDto.cs" />
     <Compile Include="Models\Enrollment.cs" />
     <Compile Include="Models\LoginRequest.cs" />
     <Compile Include="Models\Payment.cs" />
     <Compile Include="Models\PaymentHistory.cs" />
     <Compile Include="Models\QrScaner.cs" />
     <Compile Include="Models\QRSession.cs" />
+    <Compile Include="Models\ResourceRequest.cs" />
+    <Compile Include="Models\ResRequestItem.cs" />
     <Compile Include="Models\Student.cs" />
     <Compile Include="Models\StudyMaterial.cs" />
     <Compile Include="Models\Subject.cs" />
@@ -234,6 +251,7 @@
     <Compile Include="Models\Teacher.cs" />
     <Compile Include="Models\User.cs" />
     <Compile Include="Models\UserType.cs" />
+    <Compile Include="Models\Visitor.cs" />
     <Compile Include="Models\WebsiteCourse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

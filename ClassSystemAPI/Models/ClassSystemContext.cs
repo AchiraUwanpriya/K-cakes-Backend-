@@ -78,6 +78,10 @@ namespace ClassSystemAPI.Models
         public DbSet<Payment> Payment { get; set; }
         public DbSet<PaymentHistory> PaymentHistory { get; set; }
         public DbSet<WebsiteCourse> WebsiteCourses { get; set; }
+        public DbSet<Visitor> Visitors { get; set; }
+        public DbSet<CartResource> CartResources { get; set; }
+        public DbSet<ResourceRequest> ResourceRequests { get; set; }
+        public DbSet<ResRequestItem> ResRequestItems { get; set; }
 
         //public IEnumerable<object> QRSessionAttendances { get; internal set; }
 
