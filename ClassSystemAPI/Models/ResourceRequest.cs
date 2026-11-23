@@ -21,6 +21,6 @@ namespace ClassSystemAPI.Models
         public string SlipPath { get; set; }
         public string Status { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.Now;
-        public DateTime DecidedDate {  get; set; }
+        public DateTime? DecidedDate { get; set; }
     }
 }

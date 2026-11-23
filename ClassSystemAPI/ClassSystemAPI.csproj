@@ -207,15 +207,8 @@
     <Compile Include="Controllers\UsersController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
     <Compile Include="Controllers\WebsiteCoursesController.cs" />
-    <Compile Include="Controllers\VideoStoreController.cs" />
-    <Compile Include="Models\DTOs\ResourceDecisionDto.cs" />
-    <Compile Include="Models\DTOs\ResourceRequestCreateDto.cs" />
-    <Compile Include="Models\Visitor.cs" />
-    <Compile Include="Models\CartResource.cs" />
-    <Compile Include="Models\ResourceRequest.cs" />
-    <Compile Include="Models\ResRequestItem.cs" />
-    <Compile Include="Models\DTOs\VisitorRegisterDto.cs" />
-    <Compile Include="Models\DTOs\VisitorLoginDto.cs" />
+	<Compile Include="Models\DTOs\ResourceDecisionDto.cs" />
+	<Compile Include="Models\DTOs\ResourceRequestCreateDto.cs" />
     <Compile Include="Models\Announcement.cs" />
     <Compile Include="Models\Attendance.cs" />
     <Compile Include="Models\CartResource.cs" />
