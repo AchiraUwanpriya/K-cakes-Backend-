@@ -3,6 +3,7 @@ using ClassSystemAPI.Models.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -234,6 +235,146 @@ namespace ClassSystemAPI.Controllers
             }
             response.Headers.AcceptRanges.Add("bytes");
             return response;
+        }
+
+        // ---------- admin: manage resources ----------
+        private void ClearCachedThumbs(int resourceId)
+        {
+            try
+            {
+                var cacheFolder = Path.Combine(ResourceFolder, "thumbs");
+                if (!Directory.Exists(cacheFolder)) return;
+                foreach (var f in Directory.GetFiles(cacheFolder, resourceId + "_*.jpg")) File.Delete(f);
+            }
+            catch { }
+        }
+
+        private void DeleteUploadedThumb(CartResource item)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(item.ThumbnailURL)) return;
+                var old = HostingEnvironment.MapPath("~" + item.ThumbnailURL);
+                if (old != null && File.Exists(old)) File.Delete(old);
+            }
+            catch { }
+        }
+
+        // Reads the form + files sent by the admin page. Returns an error message, or null when saved into 'item'.
+        private string ApplyForm(CartResource item, bool isNew)
+        {
+            var req = HttpContext.Current.Request;
+
+            var title = (req.Form["Title"] ?? "").Trim();
+            if (title == "") return "Title is required.";
+
+            decimal price;
+            if (!decimal.TryParse(req.Form["Price"], NumberStyles.Any, CultureInfo.InvariantCulture, out price) || price < 0)
+                return "Enter a valid price.";
+
+            int lessons;
+            int.TryParse(req.Form["LessonCount"], out lessons);
+
+            var file = req.Files["File"];
+            var hasFile = file != null && file.ContentLength > 0;
+            if (isNew && !hasFile) return "Please choose the resource file.";
+
+            string fileExt = null;
+            if (hasFile)
+            {
+                fileExt = Path.GetExtension(file.FileName).ToLower();
+                if (fileExt != ".mp4" && fileExt != ".webm") return "Only MP4 or WebM files are allowed.";
+            }
+
+            var thumb = req.Files["Thumbnail"];
+            var hasThumb = thumb != null && thumb.ContentLength > 0;
+            string thumbExt = null;
+            if (hasThumb)
+            {
+                thumbExt = Path.GetExtension(thumb.FileName).ToLower();
+                if (thumbExt != ".jpg" && thumbExt != ".jpeg" && thumbExt != ".png")
+                    return "Thumbnail must be a JPG or PNG image.";
+                if (thumb.ContentLength > 5 * 1024 * 1024)
+                    return "Thumbnail size exceeds limit (5 MB).";
+            }
+
+            // all checks passed, now save
+            item.Title = title;
+            item.Tag = (req.Form["Tag"] ?? "").Trim();
+            item.Description = (req.Form["Description"] ?? "").Trim();
+            item.LessonCount = lessons;
+            item.Duration = (req.Form["Duration"] ?? "").Trim();
+            item.Price = price;
+            item.IncludeForStudents = req.Form["IncludeForStudents"] == "true";
+            item.IsActive = req.Form["IsActive"] == "true";
+
+            if (hasFile)
+            {
+                Directory.CreateDirectory(ResourceFolder);
+                var name = Guid.NewGuid().ToString("N") + fileExt;
+                file.SaveAs(Path.Combine(ResourceFolder, name));
+
+                if (!isNew && !string.IsNullOrWhiteSpace(item.ResourceURL))
+                {
+                    var old = Path.Combine(ResourceFolder, Path.GetFileName(item.ResourceURL));
+                    try { if (File.Exists(old)) File.Delete(old); } catch { }
+                    ClearCachedThumbs(item.ResourceID);
+                }
+                item.ResourceURL = name;
+            }
+
+            if (hasThumb)
+            {
+                var folder = HostingEnvironment.MapPath("~/Uploads/ResourceThumbnails");
+                Directory.CreateDirectory(folder);
+                var tname = Guid.NewGuid().ToString("N") + thumbExt;
+                thumb.SaveAs(Path.Combine(folder, tname));
+
+                DeleteUploadedThumb(item);
+                item.ThumbnailURL = "/Uploads/ResourceThumbnails/" + tname;
+            }
+            else if (req.Form["RemoveThumbnail"] == "true")
+            {
+                DeleteUploadedThumb(item);
+                item.ThumbnailURL = null;
+            }
+
+            return null;
+        }
+
+        // all resources, including hidden ones
+        [HttpGet]
+        [Route("api/ResourceStore/Resources/All")]
+        public IHttpActionResult GetAllResources()
+        {
+            return Ok(db.CartResources.OrderBy(v => v.ResourceID).ToList());
+        }
+
+        [HttpPost]
+        [Route("api/ResourceStore/Resources")]
+        public IHttpActionResult CreateResource()
+        {
+            var item = new CartResource { CreatedDate = DateTime.Now };
+            var error = ApplyForm(item, true);
+            if (error != null) return BadRequest(error);
+
+            db.CartResources.Add(item);
+            db.SaveChanges();
+            return Ok(new { item.ResourceID });
+        }
+
+        [HttpPost]
+        [Route("api/ResourceStore/Resources/{id:int}/Update")]
+        public IHttpActionResult UpdateResource(int id)
+        {
+            var item = db.CartResources.Find(id);
+            if (item == null) return NotFound();
+
+            var error = ApplyForm(item, false);
+            if (error != null) return BadRequest(error);
+
+            db.SaveChanges();
+            return Ok(new { item.ResourceID });
         }
 
         // ---------- visitors ----------
