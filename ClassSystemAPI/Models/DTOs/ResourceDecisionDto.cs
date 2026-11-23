@@ -5,8 +5,8 @@ using System.Web;
 
 namespace ClassSystemAPI.Models.DTOs
 {
-    public class VideoDecisionDto
+    public class ResourceDecisionDto
     {
-        public string Status { get; set; }
+        public string Status { get; set; }      
     }
 }
